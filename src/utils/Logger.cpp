@@ -4,19 +4,23 @@
 #include <fstream>
 #include <iostream>
 #include "Logger.h"
-#include "Time.h"
+#include "TimeUtil.h"
 #include <sstream>
 #include <sys/stat.h>
 
 #if defined (_WIN64) || defined (WIN32) || defined (_WIN32)
 
 #include <direct.h>
+#include <mutex>
 
 #else
 
 #include <unistd.h>
 
 #endif
+
+std::mutex logLock;
+Logger logger;
 
 std::string LevelName[3] = {
         "DEBUG", "INFO", "ERROR"
@@ -37,6 +41,7 @@ long getFileSize(const char *fileName) {
 }
 
 void Logger::write(const std::string &str) {
+    std::lock_guard<std::mutex> lk(logLock);
     std::ofstream fout;
     fout.open(logFile, std::ios::app);
     fout << str << std::endl;
@@ -71,8 +76,12 @@ void Logger::log(Logger::Level lv, const std::string &file, int line, const std:
         write(str);
         long size = getFileSize(logFile.c_str());
         if (size >= maxFileSize) {
-            remove((logFile + ".bak").c_str());
-            rename(logFile.c_str(), (logFile + ".bak").c_str());
+            std::lock_guard<std::mutex> lk(logLock);
+            size = getFileSize(logFile.c_str());
+            if (size >= maxFileSize) {
+                remove((logFile + ".bak").c_str());
+                rename(logFile.c_str(), (logFile + ".bak").c_str());
+            }
         }
     } catch (std::exception &e) {
         std::cout << e.what() << std::endl;

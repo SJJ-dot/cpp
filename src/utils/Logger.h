@@ -28,7 +28,7 @@ public:
     void log(Level lv, const std::string& file, int line, const std::string& content);
 };
 
-static Logger logger;
+extern Logger logger;
 
 #define __FILENAME__ (strrchr(__FILE__, '/') + 1)
 
